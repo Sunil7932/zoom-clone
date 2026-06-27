@@ -5,8 +5,9 @@ meeting workflows: a professional dashboard, instant meetings, scheduling, join
 flow, and **real peer-to-peer video/audio over WebRTC** with chat and host
 controls.
 
-- **Live demo:** _add your deployed URL here_
-- **Repository:** _add your GitHub URL here_
+- **Live demo:** https://zoom-clone-beta-nine.vercel.app
+- **Repository:** https://github.com/Sunil7932/zoom-clone
+- **API:** https://zoom-clone-api-607j.onrender.com (FastAPI on Render)
 
 > Built for the SDE Fullstack assignment. Frontend in **Next.js**, backend in
 > **Python / FastAPI**, data in **SQLite**.
