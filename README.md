@@ -33,6 +33,7 @@ The app is fully responsive (mobile, tablet, desktop).
 - [Feature checklist](#feature-checklist)
 - [Tech stack](#tech-stack)
 - [Architecture](#architecture)
+- [How it works (flow diagrams)](#how-it-works-flow-diagrams)
 - [Database design](#database-design)
 - [How the video works (WebRTC)](#how-the-video-works-webrtc)
 - [Project structure](#project-structure)
@@ -137,6 +138,73 @@ The frontend is split into three layers: **components** (UI), the **`useMeeting`
 hook** (the realtime engine: media + signaling + peer connections), and a typed
 **API/util library**. The backend keeps routers thin and puts all DB logic in a
 single `crud.py` layer.
+
+---
+
+## How it works (flow diagrams)
+
+> GitHub renders these Mermaid diagrams automatically.
+
+### 1. Creating & joining a meeting
+
+```mermaid
+flowchart TD
+    A([Dashboard]) -->|New Meeting| B[POST /api/meetings/instant]
+    A -->|Join with ID/link| C[GET /api/meetings/:code]
+    B --> D[Backend generates unique code + invite link, status=active]
+    C --> E{Meeting exists<br/>and not ended?}
+    E -->|No| F[Show error: not found / ended]
+    E -->|Yes| G
+    D --> G[Pre-join screen: name + camera/mic check]
+    G -->|Join| H[POST /api/meetings/:code/join → participant row]
+    H --> I[Open WebSocket /ws/meeting/:code]
+    I --> J{Waiting room on<br/>and a host present?}
+    J -->|No| K[Enter room → WebRTC mesh]
+    J -->|Yes, I'm a guest| L[Lobby: wait for host to admit]
+    L -->|Host admits| K
+    L -->|Host denies| F
+```
+
+### 2. WebRTC mesh signaling (peer-to-peer media)
+
+```mermaid
+sequenceDiagram
+    participant N as Newcomer
+    participant S as Signaling server
+    participant P as Existing peer
+    N->>S: join (name, mic/cam)
+    S-->>N: welcome (list of peers)
+    S-->>P: peer-joined
+    N->>S: signal → SDP offer (to P)
+    S-->>P: signal (offer from N)
+    P->>S: signal → SDP answer (to N)
+    S-->>N: signal (answer from P)
+    N->>S: signal → ICE candidates
+    S-->>P: ICE candidates
+    Note over N,P: Direct P2P audio/video flows<br/>(media never touches the server)
+```
+
+### 3. Waiting room (host admits guests)
+
+```mermaid
+sequenceDiagram
+    participant G as Guest
+    participant S as Server
+    participant H as Host
+    H->>S: lock (waiting room on)
+    G->>S: join
+    S-->>G: waiting
+    S-->>H: knock (guest name)
+    alt Host admits
+        H->>S: admit (guest id)
+        S-->>G: admitted (peer list)
+        S-->>H: peer-joined
+        Note over G,H: Guest enters the meeting
+    else Host denies
+        H->>S: deny (guest id)
+        S-->>G: denied → back to dashboard
+    end
+```
 
 ---
 
@@ -273,7 +341,7 @@ Open http://localhost:3000.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `DATABASE_URL` | `sqlite:///./zoomclone.db` | DB connection string |
+| `DATABASE_URL` | `sqlite:///./zoomclone.db` | DB connection string (on Render, a persistent disk at `/var/data`) |
 | `FRONTEND_URL` | `http://localhost:3000` | Used to build invite links |
 | `CORS_ORIGINS` | `http://localhost:3000,...` | Allowed browser origins |
 | `SEED_ON_STARTUP` | `true` | Seed sample data when DB is empty |
@@ -313,9 +381,10 @@ pip install -r requirements-dev.txt
 pytest -q
 ```
 
-Covers the full meeting lifecycle: instant/scheduled creation, unique codes,
-join + host assignment, validation (404/410/422), end-meeting, and the
-request-size guard.
+13 tests covering the full meeting lifecycle: instant/scheduled creation, unique
+codes, join + host assignment, validation (404/410/422), end-meeting, the
+request-size guard, and the WebSocket signaling handshake (rejects unknown/ended
+meetings; first joiner becomes host).
 
 ---
 
@@ -352,12 +421,29 @@ The two halves deploy independently.
 
 ## Production notes & limitations
 
+**Hardening already in place**
+
+- Input validation (Pydantic) + a request body-size cap; generic error responses
+  (no stack traces leaked to clients).
+- CORS allow-list (plus `*.vercel.app` previews).
+- The signaling WebSocket validates the meeting exists and isn't ended before
+  admitting a connection (defense in depth), and host-only actions
+  (mute/remove/admit/deny/lock) are authorised server-side.
+- Persistent disk on Render so the SQLite database survives restarts.
+- WebSocket auto-reconnect with capped backoff; route-level error boundaries.
+
+**Known trade-offs / next steps**
+
 - **Mesh scaling:** a full mesh is ideal for ~2–6 participants. For large rooms a
-  selective forwarding unit (SFU, e.g. mediasoup/LiveKit) would replace the mesh
-  — the signaling layer is already structured to make that swap.
+  selective forwarding unit (SFU, e.g. mediasoup/LiveKit) would replace the mesh —
+  the signaling layer is structured to make that swap.
 - **NAT traversal:** public STUN covers most networks; a **TURN** relay
   (configurable via env) is needed for symmetric/corporate NATs.
-- **Signaling state is in-memory** per server instance — fine for one node; use a
-  shared pub/sub (e.g. Redis) to scale signaling horizontally.
-- **Schema migrations:** tables are created on startup (great for SQLite/dev);
-  add Alembic for versioned migrations in production.
+- **Horizontal scaling:** signaling state is in-memory per instance — fine for one
+  node; use a shared pub/sub (e.g. Redis) to scale across instances.
+- **Rate limiting:** add per-IP limits on creation endpoints (e.g. slowapi) before
+  exposing publicly at scale.
+- **Migrations:** tables are created on startup (great for SQLite/dev); add Alembic
+  for versioned migrations.
+- **Free-tier cold start:** Render's free instance sleeps after ~15 min idle, so
+  the first request can take ~50s. Upgrade the instance to remove this.

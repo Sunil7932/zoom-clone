@@ -36,7 +36,20 @@ from typing import Dict, List
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from .. import crud, models
+from ..database import SessionLocal
+
 router = APIRouter(tags=["signaling"])
+
+
+def _meeting_joinable(code: str) -> bool:
+    """Validate the meeting exists and has not ended (defense in depth)."""
+    db = SessionLocal()
+    try:
+        meeting = crud.get_meeting_by_code(db, code)
+        return meeting is not None and meeting.status != models.MeetingStatus.ended
+    finally:
+        db.close()
 
 
 class Peer:
@@ -123,6 +136,14 @@ async def meeting_socket(websocket: WebSocket, code: str):
 
             # ---- join: first message establishes the peer ------------------ #
             if mtype == "join" and peer is None:
+                # Reject connections to non-existent or ended meetings.
+                if not _meeting_joinable(code):
+                    await _safe_send(
+                        websocket,
+                        {"type": "error", "message": "Meeting is not available"},
+                    )
+                    await websocket.close()
+                    return
                 peer = Peer(
                     websocket,
                     name=str(msg.get("name", "Guest"))[:120],

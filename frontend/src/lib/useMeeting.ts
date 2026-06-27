@@ -279,6 +279,13 @@ export function useMeeting({
             ws.close();
             break;
 
+          case "error":
+            // Server rejected the connection (e.g. meeting ended) — don't retry.
+            setDenied(true);
+            userLeftRef.current = true;
+            ws.close();
+            break;
+
           case "knock":
             setKnocks((prev) =>
               prev.some((k) => k.id === msg.id)

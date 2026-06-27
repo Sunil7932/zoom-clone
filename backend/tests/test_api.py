@@ -97,3 +97,21 @@ def test_oversized_body_rejected(client):
     big = {"title": "x" * (300 * 1024)}
     r = client.post("/api/meetings/instant", json=big)
     assert r.status_code == 413
+
+
+# --- WebSocket signaling ------------------------------------------------- #
+def test_ws_rejects_unknown_meeting(client):
+    with client.websocket_connect("/ws/meeting/000-0000-000") as ws:
+        ws.send_json({"type": "join", "name": "X", "micOn": True, "camOn": True})
+        msg = ws.receive_json()
+        assert msg["type"] == "error"
+
+
+def test_ws_welcomes_valid_meeting_and_first_is_host(client):
+    created = client.post("/api/meetings/instant", json={}).json()
+    with client.websocket_connect(f"/ws/meeting/{created['code']}") as ws:
+        ws.send_json({"type": "join", "name": "Host", "micOn": True, "camOn": True})
+        msg = ws.receive_json()
+        assert msg["type"] == "welcome"
+        assert msg["isHost"] is True
+        assert "selfId" in msg

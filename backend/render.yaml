@@ -1,5 +1,5 @@
 # Render.com blueprint — one-click backend deploy.
-# In the Render dashboard: New > Blueprint > point at this repo.
+# In the Render dashboard: New > Blueprint > point at this repo (Blueprint Path: backend/render.yaml).
 services:
   - type: web
     name: zoom-clone-api
@@ -9,9 +9,16 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /
+    # Persistent disk so the SQLite database survives restarts/redeploys.
+    disk:
+      name: zoomclone-data
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.9"
+      - key: DATABASE_URL
+        value: sqlite:////var/data/zoomclone.db
       - key: FRONTEND_URL
         sync: false  # set to your deployed frontend URL
       - key: CORS_ORIGINS
