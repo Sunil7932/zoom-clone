@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import type { Meeting } from "@/lib/types";
 import { formatDuration, formatMeetingTime, formatRelative } from "@/lib/format";
+import { meetingLink } from "@/lib/config";
 
 interface Props {
   meeting: Meeting;
@@ -19,7 +20,7 @@ export function MeetingCard({ meeting, variant }: Props) {
   const copyLink = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      await navigator.clipboard.writeText(meeting.invite_link);
+      await navigator.clipboard.writeText(meetingLink(meeting.code, meeting.invite_link));
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {

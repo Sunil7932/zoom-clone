@@ -9,6 +9,7 @@ import { ControlBar } from "./ControlBar";
 import { ParticipantsPanel } from "./ParticipantsPanel";
 import { VideoGrid } from "./VideoGrid";
 import { useMeeting } from "@/lib/useMeeting";
+import { meetingLink } from "@/lib/config";
 import { nowClock } from "@/lib/format";
 import type { Meeting } from "@/lib/types";
 
@@ -63,7 +64,7 @@ export function MeetingRoom({ meeting, displayName, initialMic, initialCam }: Pr
 
   const copyLink = async () => {
     try {
-      await navigator.clipboard.writeText(meeting.invite_link);
+      await navigator.clipboard.writeText(meetingLink(meeting.code, meeting.invite_link));
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {

@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { Modal } from "@/components/ui/Modal";
 import { api } from "@/lib/api";
+import { meetingLink } from "@/lib/config";
 import type { Meeting } from "@/lib/types";
 
 interface Props {
@@ -100,11 +101,11 @@ export function ScheduleModal({ open, onClose, onScheduled }: Props) {
           <div className="flex items-center gap-2">
             <input
               readOnly
-              value={created.invite_link}
+              value={meetingLink(created.code, created.invite_link)}
               className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700"
             />
             <button
-              onClick={() => copy(created.invite_link)}
+              onClick={() => copy(meetingLink(created.code, created.invite_link))}
               className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
             >
               {copied ? <Check size={15} className="text-green-600" /> : <Copy size={15} />}
