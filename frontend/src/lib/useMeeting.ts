@@ -18,6 +18,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { wsBaseUrl } from "./config";
 import { getIceServers } from "./iceServers";
+import { getDeviceIds } from "./identity";
 import type { ChatMessage, Peer, Reaction } from "./types";
 
 export type ConnStatus = "connecting" | "connected" | "error" | "closed";
@@ -55,6 +56,11 @@ export function useMeeting({
   const [removed, setRemoved] = useState(false);
   const [handRaised, setHandRaised] = useState(false);
   const [reactions, setReactions] = useState<Reaction[]>([]);
+  // Waiting-room state.
+  const [waiting, setWaiting] = useState(false);
+  const [denied, setDenied] = useState(false);
+  const [locked, setLocked] = useState(false);
+  const [knocks, setKnocks] = useState<{ id: string; name: string }[]>([]);
 
   const wsRef = useRef<WebSocket | null>(null);
   const pcsRef = useRef<Map<string, PeerConn>>(new Map());
@@ -140,6 +146,19 @@ export function useMeeting({
     [syncPeers],
   );
 
+  // As the newcomer, send an SDP offer to every peer already in the room.
+  const offerToPeers = useCallback(
+    async (peerList: Peer[]) => {
+      for (const p of peerList) {
+        const { pc } = ensurePc(p);
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        send({ type: "signal", to: p.id, data: { sdp: pc.localDescription } });
+      }
+    },
+    [ensurePc, send],
+  );
+
   // --- main effect: media + websocket ------------------------------------ //
   useEffect(() => {
     if (!enabled) return;
@@ -152,11 +171,19 @@ export function useMeeting({
 
     async function start() {
       // 1) Acquire local media (best-effort: audio-only if no camera).
+      //    Honour the user's selected camera/mic from the pre-join screen.
+      const { camId, micId } = getDeviceIds();
+      const videoConstraint: MediaTrackConstraints | boolean = camId
+        ? { deviceId: { ideal: camId } }
+        : true;
+      const audioConstraint: MediaTrackConstraints | boolean = micId
+        ? { deviceId: { ideal: micId } }
+        : true;
       let stream: MediaStream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
+          video: videoConstraint,
+          audio: audioConstraint,
         });
       } catch {
         try {
@@ -227,19 +254,48 @@ export function useMeeting({
             setSelfId(msg.selfId);
             selfIdRef.current = msg.selfId;
             setIsHost(!!msg.isHost);
-            // We are the newcomer: offer to everyone already here.
-            for (const p of msg.peers as Peer[]) {
-              const { pc } = ensurePc(p);
-              const offer = await pc.createOffer();
-              await pc.setLocalDescription(offer);
-              send({ type: "signal", to: p.id, data: { sdp: pc.localDescription } });
-            }
+            setLocked(!!msg.locked);
+            await offerToPeers(msg.peers as Peer[]);
             break;
           }
+
+          case "waiting":
+            setWaiting(true);
+            break;
+
+          case "admitted": {
+            setWaiting(false);
+            setSelfId(msg.selfId);
+            selfIdRef.current = msg.selfId;
+            setIsHost(!!msg.isHost);
+            setLocked(!!msg.locked);
+            await offerToPeers(msg.peers as Peer[]);
+            break;
+          }
+
+          case "denied":
+            setDenied(true);
+            userLeftRef.current = true; // host rejected — do not reconnect
+            ws.close();
+            break;
+
+          case "knock":
+            setKnocks((prev) =>
+              prev.some((k) => k.id === msg.id)
+                ? prev
+                : [...prev, { id: msg.id, name: msg.name }],
+            );
+            break;
+
+          case "locked":
+            setLocked(!!msg.locked);
+            break;
 
           case "peer-joined": {
             // Someone arrived after us — prepare a pc; they will offer to us.
             ensurePc(msg.peer as Peer);
+            // If they were in our knock list (just admitted), clear it.
+            setKnocks((prev) => prev.filter((k) => k.id !== msg.peer.id));
             break;
           }
 
@@ -457,6 +513,30 @@ export function useMeeting({
     [send],
   );
 
+  const toggleLock = useCallback(() => {
+    setLocked((prev) => {
+      const next = !prev;
+      send({ type: "lock", locked: next });
+      return next;
+    });
+  }, [send]);
+
+  const admit = useCallback(
+    (id: string) => {
+      send({ type: "admit", id });
+      setKnocks((prev) => prev.filter((k) => k.id !== id));
+    },
+    [send],
+  );
+
+  const deny = useCallback(
+    (id: string) => {
+      send({ type: "deny", id });
+      setKnocks((prev) => prev.filter((k) => k.id !== id));
+    },
+    [send],
+  );
+
   const hostMute = useCallback(
     (peerId: string) => send({ type: "host:mute", target: peerId }),
     [send],
@@ -491,6 +571,10 @@ export function useMeeting({
     removed,
     handRaised,
     reactions,
+    waiting,
+    denied,
+    locked,
+    knocks,
     displayName,
     toggleMic,
     toggleCam,
@@ -498,6 +582,9 @@ export function useMeeting({
     toggleHand,
     sendReaction,
     sendChat,
+    toggleLock,
+    admit,
+    deny,
     hostMute,
     hostRemove,
     leave,

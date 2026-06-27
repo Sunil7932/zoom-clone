@@ -76,3 +76,20 @@ export function setJoinPrefs(prefs: JoinPrefs): void {
   safeSet(MIC_PREF_KEY, prefs.mic ? "on" : "off");
   safeSet(CAM_PREF_KEY, prefs.cam ? "on" : "off");
 }
+
+const CAM_ID_KEY = "zoom.dev.cam";
+const MIC_ID_KEY = "zoom.dev.mic";
+
+export interface DeviceIds {
+  camId: string;
+  micId: string;
+}
+
+export function getDeviceIds(): DeviceIds {
+  return { camId: safeGet(CAM_ID_KEY) || "", micId: safeGet(MIC_ID_KEY) || "" };
+}
+
+export function setDeviceIds({ camId, micId }: DeviceIds): void {
+  if (camId) safeSet(CAM_ID_KEY, camId);
+  if (micId) safeSet(MIC_ID_KEY, micId);
+}

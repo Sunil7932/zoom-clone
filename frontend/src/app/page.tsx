@@ -65,7 +65,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f7f9fc]">
+    <div className="min-h-screen bg-[#f7f9fc] dark:bg-[#0f1115]">
       <Navbar
         user={user}
         displayName={displayName}
@@ -75,7 +75,7 @@ export default function DashboardPage() {
 
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-zoom-ink">
+          <h1 className="text-2xl font-bold text-zoom-ink dark:text-white">
             Welcome back, {displayName.split(" ")[0]} 👋
           </h1>
           <p className="mt-1 text-zoom-gray">
@@ -166,13 +166,13 @@ function Section({
     <section>
       <div className="mb-3 flex items-center gap-2">
         <span className="text-zoom-blue">{icon}</span>
-        <h2 className="font-semibold text-zoom-ink">{title}</h2>
-        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+        <h2 className="font-semibold text-zoom-ink dark:text-white">{title}</h2>
+        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-white/10 dark:text-gray-300">
           {count}
         </span>
       </div>
       {count === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-200 bg-white/50 px-4 py-10 text-center text-sm text-zoom-gray">
+        <div className="rounded-xl border border-dashed border-gray-200 bg-white/50 px-4 py-10 text-center text-sm text-zoom-gray dark:border-white/10 dark:bg-white/5">
           {empty}
         </div>
       ) : (

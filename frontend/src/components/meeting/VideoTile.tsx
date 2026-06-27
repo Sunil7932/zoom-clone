@@ -1,6 +1,6 @@
 "use client";
 
-import { Hand, MicOff, Pin } from "lucide-react";
+import { Hand, MicOff, Pin, PinOff } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import { Avatar } from "@/components/ui/Avatar";
@@ -15,6 +15,8 @@ interface Props {
   isHost?: boolean;
   handRaised?: boolean;
   speaking?: boolean;
+  pinned?: boolean;
+  onTogglePin?: () => void;
 }
 
 /** A single participant's video tile, with avatar fallback when camera is off. */
@@ -28,6 +30,8 @@ export function VideoTile({
   isHost,
   handRaised,
   speaking,
+  pinned,
+  onTogglePin,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -40,10 +44,19 @@ export function VideoTile({
 
   return (
     <div
-      className={`relative aspect-video w-full overflow-hidden rounded-xl bg-room-tile ${
+      className={`group relative aspect-video w-full overflow-hidden rounded-xl bg-room-tile ${
         speaking && micOn ? "speaking-ring" : ""
       }`}
     >
+      {onTogglePin && (
+        <button
+          onClick={onTogglePin}
+          aria-label={pinned ? "Unpin" : "Pin to spotlight"}
+          className="absolute top-2 right-10 z-10 rounded-md bg-black/55 p-1.5 text-white opacity-0 transition hover:bg-black/75 group-hover:opacity-100"
+        >
+          {pinned ? <PinOff size={14} /> : <Pin size={14} />}
+        </button>
+      )}
       {/* Video element is always mounted so the stream attaches; hidden when cam off. */}
       <video
         ref={videoRef}

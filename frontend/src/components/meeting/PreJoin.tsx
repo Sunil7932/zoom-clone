@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { Avatar } from "@/components/ui/Avatar";
-import { getJoinPrefs } from "@/lib/identity";
+import { getDeviceIds, getJoinPrefs, setDeviceIds } from "@/lib/identity";
 import type { Meeting } from "@/lib/types";
 
 interface Props {
@@ -33,14 +33,32 @@ export function PreJoin({ meeting, defaultName, onJoin }: Props) {
   const [micOn, setMicOn] = useState(() => getJoinPrefs().mic);
   const [camOn, setCamOn] = useState(() => getJoinPrefs().cam);
   const [permissionError, setPermissionError] = useState(false);
+  const [cams, setCams] = useState<MediaDeviceInfo[]>([]);
+  const [mics, setMics] = useState<MediaDeviceInfo[]>([]);
+  const [camId, setCamId] = useState(() => getDeviceIds().camId);
+  const [micId, setMicId] = useState(() => getDeviceIds().micId);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  // Acquire a preview stream once; toggle tracks with the buttons.
+  const refreshDeviceList = async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      setCams(devices.filter((d) => d.kind === "videoinput"));
+      setMics(devices.filter((d) => d.kind === "audioinput"));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  // Acquire the preview stream (honouring saved device choices) once.
   useEffect(() => {
     let cancelled = false;
+    const saved = getDeviceIds();
     navigator.mediaDevices
-      .getUserMedia({ video: true, audio: true })
+      .getUserMedia({
+        video: saved.camId ? { deviceId: { ideal: saved.camId } } : true,
+        audio: saved.micId ? { deviceId: { ideal: saved.micId } } : true,
+      })
       .then((stream) => {
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
@@ -48,12 +66,21 @@ export function PreJoin({ meeting, defaultName, onJoin }: Props) {
         }
         streamRef.current = stream;
         if (videoRef.current) videoRef.current.srcObject = stream;
+        stream.getVideoTracks().forEach((t) => (t.enabled = camOn));
+        stream.getAudioTracks().forEach((t) => (t.enabled = micOn));
+        // Reflect the actual devices in use.
+        const vid = stream.getVideoTracks()[0]?.getSettings().deviceId;
+        const aud = stream.getAudioTracks()[0]?.getSettings().deviceId;
+        if (vid) setCamId(vid);
+        if (aud) setMicId(aud);
+        refreshDeviceList();
       })
       .catch(() => setPermissionError(true));
     return () => {
       cancelled = true;
       streamRef.current?.getTracks().forEach((t) => t.stop());
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -63,6 +90,25 @@ export function PreJoin({ meeting, defaultName, onJoin }: Props) {
     streamRef.current?.getAudioTracks().forEach((t) => (t.enabled = micOn));
   }, [micOn]);
 
+  // Switch camera/microphone: re-acquire the preview with the chosen devices.
+  const switchDevices = async (nextCam: string, nextMic: string) => {
+    setCamId(nextCam);
+    setMicId(nextMic);
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: nextCam ? { deviceId: { exact: nextCam } } : true,
+        audio: nextMic ? { deviceId: { exact: nextMic } } : true,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) videoRef.current.srcObject = stream;
+      stream.getVideoTracks().forEach((t) => (t.enabled = camOn));
+      stream.getAudioTracks().forEach((t) => (t.enabled = micOn));
+    } catch {
+      setPermissionError(true);
+    }
+  };
+
   const join = () => {
     if (!name.trim()) return;
     try {
@@ -70,6 +116,7 @@ export function PreJoin({ meeting, defaultName, onJoin }: Props) {
     } catch {
       /* storage blocked */
     }
+    setDeviceIds({ camId, micId }); // remember device choices for the room
     streamRef.current?.getTracks().forEach((t) => t.stop()); // free device for the room
     onJoin(name.trim(), micOn, camOn);
   };
@@ -120,6 +167,48 @@ export function PreJoin({ meeting, defaultName, onJoin }: Props) {
             placeholder="Enter your name"
             className="w-full rounded-lg border border-white/15 bg-room-800 px-4 py-3 text-white outline-none transition focus:border-zoom-blue focus:ring-2 focus:ring-zoom-blue/30"
           />
+
+          {/* Device selection */}
+          {(cams.length > 0 || mics.length > 0) && (
+            <div className="mt-4 grid grid-cols-1 gap-3">
+              {cams.length > 0 && (
+                <label className="block">
+                  <span className="mb-1 flex items-center gap-1.5 text-xs font-medium text-white/60">
+                    <Video size={13} /> Camera
+                  </span>
+                  <select
+                    value={camId}
+                    onChange={(e) => switchDevices(e.target.value, micId)}
+                    className="w-full rounded-lg border border-white/15 bg-room-800 px-3 py-2 text-sm text-white outline-none focus:border-zoom-blue"
+                  >
+                    {cams.map((d, i) => (
+                      <option key={d.deviceId} value={d.deviceId}>
+                        {d.label || `Camera ${i + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {mics.length > 0 && (
+                <label className="block">
+                  <span className="mb-1 flex items-center gap-1.5 text-xs font-medium text-white/60">
+                    <Mic size={13} /> Microphone
+                  </span>
+                  <select
+                    value={micId}
+                    onChange={(e) => switchDevices(camId, e.target.value)}
+                    className="w-full rounded-lg border border-white/15 bg-room-800 px-3 py-2 text-sm text-white outline-none focus:border-zoom-blue"
+                  >
+                    {mics.map((d, i) => (
+                      <option key={d.deviceId} value={d.deviceId}>
+                        {d.label || `Microphone ${i + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+            </div>
+          )}
 
           <button
             onClick={join}

@@ -34,13 +34,13 @@ export function MeetingCard({ meeting, variant }: Props) {
       : formatRelative(meeting.started_at || meeting.created_at);
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-white p-4 shadow-sm transition hover:shadow-md sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-white p-4 shadow-sm transition hover:shadow-md sm:flex-row sm:items-center sm:justify-between dark:border-white/10 dark:bg-room-800">
       <div className="flex min-w-0 items-start gap-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-zoom-blue">
           <Video size={20} />
         </div>
         <div className="min-w-0">
-          <p className="truncate font-semibold text-zoom-ink">{meeting.title}</p>
+          <p className="truncate font-semibold text-zoom-ink dark:text-white">{meeting.title}</p>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zoom-gray">
             <span className="inline-flex items-center gap-1">
               <Clock size={14} /> {timeLabel}
@@ -61,7 +61,7 @@ export function MeetingCard({ meeting, variant }: Props) {
       <div className="flex shrink-0 items-center gap-2">
         <button
           onClick={copyLink}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-white/15 dark:text-gray-300 dark:hover:bg-white/10"
         >
           {copied ? <Check size={15} className="text-green-600" /> : <Copy size={15} />}
           {copied ? "Copied" : "Copy"}

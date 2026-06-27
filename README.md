@@ -87,7 +87,11 @@ Everything in the brief, mapped to where it lives.
   state sync, and a **gallery view** that adapts to participant count.
 - **Raise hand** ✋, **emoji reactions** that float on screen, and **active-speaker
   detection** (Web Audio) that rings the tile of whoever is talking.
-- **Meeting duration timer**, **remembers your display name**, **keyboard
+- **Pin / spotlight** a participant (speaker view), **camera/microphone picker**
+  on the pre-join screen, and a **waiting room** the host can toggle on to admit
+  guests one by one.
+- **Light / dark theme**, **toast notifications** (copy link, join/leave),
+  **meeting duration timer**, **remembers your display name**, **keyboard
   shortcuts** (M = mute, V = video), **WebSocket auto-reconnect** with backoff,
   host auto-promotion when the host leaves, error boundaries, and a backend
   test suite.

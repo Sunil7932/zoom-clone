@@ -22,7 +22,7 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#f7f9fc] p-4">
+    <div className="flex min-h-screen items-center justify-center bg-[#f7f9fc] p-4 dark:bg-[#0f1115]">
       <div className="w-full max-w-sm rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
         <div className="mb-6 flex flex-col items-center text-center">
           <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-zoom-blue text-white">

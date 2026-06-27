@@ -66,6 +66,11 @@ class Room:
     def __init__(self, code: str):
         self.code = code
         self.peers: Dict[str, Peer] = {}
+        self.locked = False                    # waiting room enabled?
+        self.waiting: Dict[str, Peer] = {}     # peers awaiting host admission
+
+    def hosts(self):
+        return [p for p in self.peers.values() if p.is_host]
 
     async def broadcast(self, message: dict, exclude: str | None = None) -> None:
         for pid, peer in list(self.peers.items()):
@@ -124,6 +129,18 @@ async def meeting_socket(websocket: WebSocket, code: str):
                     mic_on=bool(msg.get("micOn", True)),
                     cam_on=bool(msg.get("camOn", True)),
                 )
+
+                # If the waiting room is on and a host is present, hold this peer
+                # in the lobby until a host admits them.
+                if room.locked and room.hosts():
+                    room.waiting[peer.id] = peer
+                    await _safe_send(websocket, {"type": "waiting"})
+                    for h in room.hosts():
+                        await _safe_send(
+                            h.ws, {"type": "knock", "id": peer.id, "name": peer.name}
+                        )
+                    continue
+
                 # First peer in the room is the host.
                 peer.is_host = len(room.peers) == 0
                 existing = [p.public() for p in room.peers.values()]
@@ -132,12 +149,18 @@ async def meeting_socket(websocket: WebSocket, code: str):
                 await _safe_send(
                     websocket,
                     {"type": "welcome", "selfId": peer.id, "peers": existing,
-                     "isHost": peer.is_host},
+                     "isHost": peer.is_host, "locked": room.locked},
                 )
                 await room.broadcast(
                     {"type": "peer-joined", "peer": peer.public()},
                     exclude=peer.id,
                 )
+                # A newly-arrived host inherits any pending knocks.
+                if peer.is_host and room.waiting:
+                    for w in room.waiting.values():
+                        await _safe_send(
+                            websocket, {"type": "knock", "id": w.id, "name": w.name}
+                        )
                 continue
 
             if peer is None:
@@ -188,6 +211,31 @@ async def meeting_socket(websocket: WebSocket, code: str):
                         {"type": "reaction", "id": peer.id, "name": peer.name, "emoji": emoji}
                     )
 
+            # ---- waiting room (host) --------------------------------------- #
+            elif mtype == "lock" and peer.is_host:
+                room.locked = bool(msg.get("locked", False))
+                await room.broadcast({"type": "locked", "locked": room.locked})
+
+            elif mtype == "admit" and peer.is_host:
+                wid = msg.get("id")
+                waiter = room.waiting.pop(wid, None)
+                if waiter:
+                    existing = [p.public() for p in room.peers.values()]
+                    room.peers[wid] = waiter
+                    await _safe_send(
+                        waiter.ws,
+                        {"type": "admitted", "selfId": waiter.id, "peers": existing,
+                         "isHost": False, "locked": room.locked},
+                    )
+                    await room.broadcast(
+                        {"type": "peer-joined", "peer": waiter.public()}, exclude=wid
+                    )
+
+            elif mtype == "deny" and peer.is_host:
+                waiter = room.waiting.pop(msg.get("id"), None)
+                if waiter:
+                    await _safe_send(waiter.ws, {"type": "denied"})
+
             # ---- host controls --------------------------------------------- #
             elif mtype == "host:mute" and peer.is_host:
                 await room.send_to(msg.get("target"), {"type": "force-mute"})
@@ -208,8 +256,12 @@ async def meeting_socket(websocket: WebSocket, code: str):
         pass
     finally:
         if peer is not None:
-            room.peers.pop(peer.id, None)
-            await room.broadcast({"type": "peer-left", "id": peer.id})
+            # A peer who disconnects while still in the lobby just leaves quietly.
+            if peer.id in room.waiting:
+                room.waiting.pop(peer.id, None)
+            else:
+                room.peers.pop(peer.id, None)
+                await room.broadcast({"type": "peer-left", "id": peer.id})
             # If the host left, promote the next peer so host controls survive.
             if peer.is_host and room.peers:
                 new_host = next(iter(room.peers.values()))

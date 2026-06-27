@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Enable class-based dark mode: `dark:` utilities apply under a `.dark` ancestor. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /*
  * Zoom-inspired design tokens.
  * Brand blue (#0E72ED) and a near-black meeting-room palette mirror Zoom's web app.
@@ -25,8 +28,14 @@
   --foreground: #131619;
 }
 
+.dark {
+  --background: #0f1115;
+  --foreground: #e9eaec;
+}
+
 html,
 body {
+  height: 100%;
   max-width: 100vw;
   background: var(--background);
   color: var(--foreground);

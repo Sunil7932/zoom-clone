@@ -55,7 +55,7 @@ export function ActionTiles({ onNewMeeting, onJoin, onSchedule }: Props) {
           <button
             key={a.key}
             onClick={a.onClick}
-            className="group flex items-center gap-4 rounded-2xl border border-gray-100 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-zoom-blue"
+            className="group flex items-center gap-4 rounded-2xl border border-gray-100 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-zoom-blue dark:border-white/10 dark:bg-room-800"
           >
             <span
               className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl text-white transition group-hover:scale-105 ${a.color}`}
@@ -63,7 +63,7 @@ export function ActionTiles({ onNewMeeting, onJoin, onSchedule }: Props) {
               <Icon size={26} />
             </span>
             <span>
-              <span className="block text-base font-semibold text-zoom-ink">
+              <span className="block text-base font-semibold text-zoom-ink dark:text-white">
                 {a.label}
               </span>
               <span className="block text-sm text-zoom-gray">{a.sublabel}</span>
