@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+**/node_modules/
+backend/.venv/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Database (re-seeded on first run)
+*.db
+*.sqlite3
+
+# Environment
+.env
+.env.local
+.env*.local
+
+# Next.js
+frontend/.next/
+frontend/out/
+frontend/next-env.d.ts
+
+# Build
+dist/
+build/
+
+# Logs
+*.log
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Vercel
+.vercel

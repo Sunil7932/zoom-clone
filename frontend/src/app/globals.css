@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+/*
+ * Zoom-inspired design tokens.
+ * Brand blue (#0E72ED) and a near-black meeting-room palette mirror Zoom's web app.
+ */
+@theme {
+  --color-zoom-blue: #0e72ed;
+  --color-zoom-blue-dark: #0b5cca;
+  --color-zoom-blue-light: #4a93f2;
+  --color-zoom-ink: #131619;
+  --color-zoom-gray: #747487;
+  --color-room-900: #1a1a1a;
+  --color-room-800: #232323;
+  --color-room-700: #2d2d2d;
+  --color-room-tile: #3c3f44;
+  --color-control-bar: #1c1d1f;
+  --color-danger: #e02d2d;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  --background: #f7f9fc;
+  --foreground: #131619;
+}
+
+html,
+body {
+  max-width: 100vw;
+  background: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Thin, dark scrollbars inside the meeting room panels. */
+.dark-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.dark-scroll::-webkit-scrollbar-thumb {
+  background: #4a4a4a;
+  border-radius: 8px;
+}
+.dark-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Subtle pulse for the "live" indicator. */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.pulse-dot {
+  animation: pulse-dot 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-dot { animation: none; }
+}

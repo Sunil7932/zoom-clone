@@ -1,0 +1,20 @@
+# Render.com blueprint — one-click backend deploy.
+# In the Render dashboard: New > Blueprint > point at this repo.
+services:
+  - type: web
+    name: zoom-clone-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: FRONTEND_URL
+        sync: false  # set to your deployed frontend URL
+      - key: CORS_ORIGINS
+        sync: false  # set to your deployed frontend URL
+      - key: SEED_ON_STARTUP
+        value: "true"
