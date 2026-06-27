@@ -6,6 +6,15 @@ const MONTH = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
+/**
+ * Parse a backend timestamp. SQLite drops tz info, so the API may emit naive
+ * UTC strings (no offset) — append 'Z' so they're parsed as UTC, not local time.
+ */
+export function toDate(iso: string): Date {
+  const hasTz = /([zZ])|([+-]\d{2}:?\d{2})$/.test(iso);
+  return new Date(hasTz ? iso : `${iso}Z`);
+}
+
 function isSameDay(a: Date, b: Date): boolean {
   return (
     a.getFullYear() === b.getFullYear() &&
@@ -15,7 +24,7 @@ function isSameDay(a: Date, b: Date): boolean {
 }
 
 export function formatTime(iso: string): string {
-  const d = new Date(iso);
+  const d = toDate(iso);
   let h = d.getHours();
   const m = d.getMinutes().toString().padStart(2, "0");
   const ampm = h >= 12 ? "PM" : "AM";
@@ -25,7 +34,7 @@ export function formatTime(iso: string): string {
 
 /** "Today, 3:30 PM" / "Tomorrow, 9:00 AM" / "Mon, Jun 24, 2:00 PM". */
 export function formatMeetingTime(iso: string): string {
-  const d = new Date(iso);
+  const d = toDate(iso);
   const now = new Date();
   const tomorrow = new Date(now);
   tomorrow.setDate(now.getDate() + 1);
@@ -38,7 +47,7 @@ export function formatMeetingTime(iso: string): string {
 
 /** Relative past time for recent meetings: "2 hours ago", "Yesterday". */
 export function formatRelative(iso: string): string {
-  const d = new Date(iso);
+  const d = toDate(iso);
   const diffMs = Date.now() - d.getTime();
   const mins = Math.floor(diffMs / 60000);
   if (mins < 1) return "Just now";

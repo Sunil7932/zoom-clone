@@ -18,7 +18,17 @@ interface Props {
  * mic/camera toggles, and a required display name (Zoom's "Join" gate).
  */
 export function PreJoin({ meeting, defaultName, onJoin }: Props) {
-  const [name, setName] = useState(defaultName);
+  // Remember the last-used name across sessions (falls back to the logged-in user).
+  const [name, setName] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        return localStorage.getItem("zoom.displayName") || defaultName;
+      } catch {
+        /* storage blocked */
+      }
+    }
+    return defaultName;
+  });
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
   const [permissionError, setPermissionError] = useState(false);
@@ -54,6 +64,11 @@ export function PreJoin({ meeting, defaultName, onJoin }: Props) {
 
   const join = () => {
     if (!name.trim()) return;
+    try {
+      localStorage.setItem("zoom.displayName", name.trim());
+    } catch {
+      /* storage blocked */
+    }
     streamRef.current?.getTracks().forEach((t) => t.stop()); // free device for the room
     onJoin(name.trim(), micOn, camOn);
   };

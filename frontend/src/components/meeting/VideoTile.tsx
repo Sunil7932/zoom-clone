@@ -1,6 +1,6 @@
 "use client";
 
-import { MicOff, Pin } from "lucide-react";
+import { Hand, MicOff, Pin } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import { Avatar } from "@/components/ui/Avatar";
@@ -13,6 +13,8 @@ interface Props {
   camOn: boolean;
   isSelf?: boolean;
   isHost?: boolean;
+  handRaised?: boolean;
+  speaking?: boolean;
 }
 
 /** A single participant's video tile, with avatar fallback when camera is off. */
@@ -24,6 +26,8 @@ export function VideoTile({
   camOn,
   isSelf,
   isHost,
+  handRaised,
+  speaking,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -35,7 +39,11 @@ export function VideoTile({
   }, [stream]);
 
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-room-tile">
+    <div
+      className={`relative aspect-video w-full overflow-hidden rounded-xl bg-room-tile ${
+        speaking && micOn ? "speaking-ring" : ""
+      }`}
+    >
       {/* Video element is always mounted so the stream attaches; hidden when cam off. */}
       <video
         ref={videoRef}
@@ -65,6 +73,12 @@ export function VideoTile({
       {isHost && (
         <div className="absolute top-2 left-2 flex items-center gap-1 rounded-md bg-zoom-blue/90 px-2 py-0.5 text-[11px] font-semibold text-white">
           <Pin size={11} /> Host
+        </div>
+      )}
+
+      {handRaised && (
+        <div className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-amber-400 text-amber-900 shadow-lg">
+          <Hand size={15} />
         </div>
       )}
     </div>

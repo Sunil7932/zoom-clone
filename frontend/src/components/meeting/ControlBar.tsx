@@ -1,23 +1,29 @@
 "use client";
 
 import {
+  Hand,
   MessageSquare,
   Mic,
   MicOff,
   MonitorUp,
   PhoneOff,
+  Smile,
   Users,
   Video,
   VideoOff,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { useState } from "react";
 
 import { cn } from "@/lib/cn";
+
+const REACTIONS = ["👍", "❤️", "😂", "🎉", "👏", "😮"];
 
 interface Props {
   micOn: boolean;
   camOn: boolean;
   sharing: boolean;
+  handRaised: boolean;
   participantsOpen: boolean;
   chatOpen: boolean;
   participantCount: number;
@@ -25,12 +31,16 @@ interface Props {
   onToggleMic: () => void;
   onToggleCam: () => void;
   onToggleShare: () => void;
+  onToggleHand: () => void;
+  onReact: (emoji: string) => void;
   onToggleParticipants: () => void;
   onToggleChat: () => void;
   onLeave: () => void;
 }
 
 export function ControlBar(props: Props) {
+  const [reactOpen, setReactOpen] = useState(false);
+
   return (
     <div className="flex items-center justify-center gap-2 border-t border-black/40 bg-control-bar px-3 py-3 sm:gap-3">
       <ControlButton
@@ -55,6 +65,47 @@ export function ControlBar(props: Props) {
         onClick={props.onToggleShare}
         className="hidden sm:flex"
       />
+      <ControlButton
+        icon={Hand}
+        label="Raise Hand"
+        active={props.handRaised}
+        highlight={props.handRaised}
+        onClick={props.onToggleHand}
+      />
+
+      {/* Reactions with an emoji popover */}
+      <div className="relative">
+        <ControlButton
+          icon={Smile}
+          label="React"
+          active={reactOpen}
+          onClick={() => setReactOpen((v) => !v)}
+        />
+        {reactOpen && (
+          <>
+            <div
+              className="fixed inset-0 z-10"
+              onClick={() => setReactOpen(false)}
+            />
+            <div className="absolute bottom-16 left-1/2 z-20 flex -translate-x-1/2 gap-1 rounded-full bg-room-700 px-2 py-1.5 shadow-xl ring-1 ring-white/10">
+              {REACTIONS.map((e) => (
+                <button
+                  key={e}
+                  onClick={() => {
+                    props.onReact(e);
+                    setReactOpen(false);
+                  }}
+                  className="rounded-full p-1.5 text-xl transition hover:scale-125 hover:bg-white/10"
+                  aria-label={`React with ${e}`}
+                >
+                  {e}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
       <ControlButton
         icon={Users}
         label="Participants"

@@ -18,7 +18,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { wsBaseUrl } from "./config";
 import { getIceServers } from "./iceServers";
-import type { ChatMessage, Peer } from "./types";
+import type { ChatMessage, Peer, Reaction } from "./types";
 
 export type ConnStatus = "connecting" | "connected" | "error" | "closed";
 
@@ -53,6 +53,8 @@ export function useMeeting({
   const [status, setStatus] = useState<ConnStatus>("connecting");
   const [forceMuted, setForceMuted] = useState(false);
   const [removed, setRemoved] = useState(false);
+  const [handRaised, setHandRaised] = useState(false);
+  const [reactions, setReactions] = useState<Reaction[]>([]);
 
   const wsRef = useRef<WebSocket | null>(null);
   const pcsRef = useRef<Map<string, PeerConn>>(new Map());
@@ -282,6 +284,30 @@ export function useMeeting({
             break;
           }
 
+          case "hand": {
+            const conn = pcsRef.current.get(msg.id);
+            if (conn) {
+              conn.info = { ...conn.info, handRaised: msg.raised };
+              pcsRef.current.set(msg.id, conn);
+              syncPeers();
+            }
+            break;
+          }
+
+          case "reaction": {
+            const key = `${msg.id}-${Date.now()}-${Math.random()}`;
+            setReactions((prev) => [
+              ...prev,
+              { key, id: msg.id, name: msg.name, emoji: msg.emoji },
+            ]);
+            // Auto-remove after the float animation.
+            setTimeout(
+              () => setReactions((prev) => prev.filter((r) => r.key !== key)),
+              4000,
+            );
+            break;
+          }
+
           case "peer-left":
             closePc(msg.id);
             break;
@@ -418,6 +444,19 @@ export function useMeeting({
     [send],
   );
 
+  const toggleHand = useCallback(() => {
+    setHandRaised((prev) => {
+      const next = !prev;
+      send({ type: "raise-hand", raised: next });
+      return next;
+    });
+  }, [send]);
+
+  const sendReaction = useCallback(
+    (emoji: string) => send({ type: "reaction", emoji }),
+    [send],
+  );
+
   const hostMute = useCallback(
     (peerId: string) => send({ type: "host:mute", target: peerId }),
     [send],
@@ -450,10 +489,14 @@ export function useMeeting({
     status,
     forceMuted,
     removed,
+    handRaised,
+    reactions,
     displayName,
     toggleMic,
     toggleCam,
     toggleScreenShare,
+    toggleHand,
+    sendReaction,
     sendChat,
     hostMute,
     hostRemove,

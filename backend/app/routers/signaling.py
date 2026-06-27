@@ -47,6 +47,7 @@ class Peer:
         self.mic_on = mic_on
         self.cam_on = cam_on
         self.is_host = False
+        self.hand_raised = False
 
     def public(self) -> dict:
         return {
@@ -55,6 +56,7 @@ class Peer:
             "micOn": self.mic_on,
             "camOn": self.cam_on,
             "isHost": self.is_host,
+            "handRaised": self.hand_raised,
         }
 
 
@@ -170,6 +172,21 @@ async def meeting_socket(websocket: WebSocket, code: str):
                         "text": text,
                         "ts": datetime.now(timezone.utc).isoformat(),
                     })
+
+            # ---- raise / lower hand ---------------------------------------- #
+            elif mtype == "raise-hand":
+                peer.hand_raised = bool(msg.get("raised", False))
+                await room.broadcast(
+                    {"type": "hand", "id": peer.id, "raised": peer.hand_raised}
+                )
+
+            # ---- emoji reactions ------------------------------------------- #
+            elif mtype == "reaction":
+                emoji = str(msg.get("emoji", ""))[:8]
+                if emoji:
+                    await room.broadcast(
+                        {"type": "reaction", "id": peer.id, "name": peer.name, "emoji": emoji}
+                    )
 
             # ---- host controls --------------------------------------------- #
             elif mtype == "host:mute" and peer.is_host:

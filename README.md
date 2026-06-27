@@ -20,6 +20,10 @@ controls.
 |---|---|---|
 | ![Dashboard](docs/screenshots/01-dashboard.png) | ![Pre-join](docs/screenshots/02-prejoin.png) | ![Meeting room](docs/screenshots/03-meeting-room.png) |
 
+**Raise hand, reactions & active-speaker highlighting:**
+
+![Features](docs/screenshots/05-features.png)
+
 The app is fully responsive (mobile, tablet, desktop).
 
 ---
@@ -78,9 +82,12 @@ Everything in the brief, mapped to where it lives.
 ### Extra polish (beyond the brief)
 
 - Real-time **in-meeting chat**, **screen sharing**, camera/mic toggles with live
-  state sync, typing-free **gallery view** that adapts to participant count,
-  **WebSocket auto-reconnect** with backoff, host auto-promotion when the host
-  leaves, error boundaries, and a backend test suite.
+  state sync, and a **gallery view** that adapts to participant count.
+- **Raise hand** ✋, **emoji reactions** that float on screen, and **active-speaker
+  detection** (Web Audio) that rings the tile of whoever is talking.
+- **Meeting duration timer**, **remembers your display name**, **WebSocket
+  auto-reconnect** with backoff, host auto-promotion when the host leaves,
+  error boundaries, and a backend test suite.
 
 ---
 

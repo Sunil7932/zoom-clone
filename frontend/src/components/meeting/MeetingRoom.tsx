@@ -6,11 +6,14 @@ import { useRouter } from "next/navigation";
 
 import { ChatPanel } from "./ChatPanel";
 import { ControlBar } from "./ControlBar";
+import { MeetingTimer } from "./MeetingTimer";
 import { ParticipantsPanel } from "./ParticipantsPanel";
+import { ReactionsOverlay } from "./ReactionsOverlay";
 import { VideoGrid } from "./VideoGrid";
 import { useMeeting } from "@/lib/useMeeting";
+import { useActiveSpeaker } from "@/lib/useActiveSpeaker";
 import { meetingLink } from "@/lib/config";
-import { nowClock } from "@/lib/format";
+import { toDate } from "@/lib/format";
 import type { Meeting } from "@/lib/types";
 
 interface Props {
@@ -26,8 +29,11 @@ export function MeetingRoom({ meeting, displayName, initialMic, initialCam }: Pr
   const router = useRouter();
   const [panel, setPanel] = useState<Panel>("none");
   const [copied, setCopied] = useState(false);
-  const [clock, setClock] = useState(nowClock());
   const [lastSeenChat, setLastSeenChat] = useState(0);
+  // Meeting start time for the elapsed timer (server time if available).
+  const [startedAt] = useState(() =>
+    meeting.started_at ? toDate(meeting.started_at).getTime() : Date.now(),
+  );
 
   const m = useMeeting({
     code: meeting.code,
@@ -37,11 +43,13 @@ export function MeetingRoom({ meeting, displayName, initialMic, initialCam }: Pr
     enabled: true,
   });
 
-  // Live clock in the header.
-  useEffect(() => {
-    const id = setInterval(() => setClock(nowClock()), 1000 * 30);
-    return () => clearInterval(id);
-  }, []);
+  // Who's currently talking (audio-level based), merged into self + peers.
+  const speakingIds = useActiveSpeaker(m.localStream, m.peers);
+  const selfSpeaking = speakingIds.has("self");
+  const peersWithSpeaking = m.peers.map((p) => ({
+    ...p,
+    speaking: speakingIds.has(p.id),
+  }));
 
   // Track unread chat while the chat panel is closed. lastSeen is updated in the
   // chat toggle handler (below) rather than an effect, to avoid extra renders.
@@ -99,7 +107,9 @@ export function MeetingRoom({ meeting, displayName, initialMic, initialCam }: Pr
           {m.status === "connecting" ? (
             <span className="text-amber-400">Reconnecting…</span>
           ) : (
-            <span className="hidden sm:inline">{clock}</span>
+            <span className="hidden sm:inline">
+              <MeetingTimer startedAt={startedAt} />
+            </span>
           )}
           <button
             onClick={copyLink}
@@ -113,15 +123,18 @@ export function MeetingRoom({ meeting, displayName, initialMic, initialCam }: Pr
 
       {/* Body: grid + optional side panel */}
       <div className="flex min-h-0 flex-1">
-        <main className="min-h-0 min-w-0 flex-1">
+        <main className="relative min-h-0 min-w-0 flex-1">
           <VideoGrid
             localStream={m.localStream}
             selfName={displayName}
             selfMic={m.micOn}
             selfCam={m.camOn}
             selfIsHost={m.isHost}
-            peers={m.peers}
+            selfHandRaised={m.handRaised}
+            selfSpeaking={selfSpeaking}
+            peers={peersWithSpeaking}
           />
+          <ReactionsOverlay reactions={m.reactions} />
         </main>
 
         {panel !== "none" && (
@@ -131,7 +144,8 @@ export function MeetingRoom({ meeting, displayName, initialMic, initialCam }: Pr
                 selfName={displayName}
                 selfMic={m.micOn}
                 selfIsHost={m.isHost}
-                peers={m.peers}
+                selfHandRaised={m.handRaised}
+                peers={peersWithSpeaking}
                 onClose={() => setPanel("none")}
                 onHostMute={m.hostMute}
                 onHostRemove={m.hostRemove}
@@ -153,6 +167,7 @@ export function MeetingRoom({ meeting, displayName, initialMic, initialCam }: Pr
         micOn={m.micOn}
         camOn={m.camOn}
         sharing={m.sharing}
+        handRaised={m.handRaised}
         participantsOpen={panel === "participants"}
         chatOpen={panel === "chat"}
         participantCount={m.peers.length + 1}
@@ -160,6 +175,8 @@ export function MeetingRoom({ meeting, displayName, initialMic, initialCam }: Pr
         onToggleMic={m.toggleMic}
         onToggleCam={m.toggleCam}
         onToggleShare={m.toggleScreenShare}
+        onToggleHand={m.toggleHand}
+        onReact={m.sendReaction}
         onToggleParticipants={() =>
           setPanel((p) => (p === "participants" ? "none" : "participants"))
         }

@@ -9,6 +9,8 @@ interface Props {
   selfMic: boolean;
   selfCam: boolean;
   selfIsHost: boolean;
+  selfHandRaised: boolean;
+  selfSpeaking: boolean;
   peers: Peer[];
 }
 
@@ -31,6 +33,8 @@ export function VideoGrid({
   selfMic,
   selfCam,
   selfIsHost,
+  selfHandRaised,
+  selfSpeaking,
   peers,
 }: Props) {
   const total = peers.length + 1;
@@ -47,6 +51,8 @@ export function VideoGrid({
           camOn={selfCam}
           isSelf
           isHost={selfIsHost}
+          handRaised={selfHandRaised}
+          speaking={selfSpeaking}
         />
         {peers.map((p) => (
           <VideoTile
@@ -56,6 +62,8 @@ export function VideoGrid({
             micOn={p.micOn}
             camOn={p.camOn}
             isHost={p.isHost}
+            handRaised={p.handRaised}
+            speaking={p.speaking}
           />
         ))}
       </div>

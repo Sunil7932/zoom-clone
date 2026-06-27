@@ -1,6 +1,6 @@
 "use client";
 
-import { MicOff, Mic, MoreVertical, UserX, X } from "lucide-react";
+import { Hand, MicOff, Mic, MoreVertical, UserX, X } from "lucide-react";
 import { useState } from "react";
 
 import { Avatar } from "@/components/ui/Avatar";
@@ -10,6 +10,7 @@ interface Props {
   selfName: string;
   selfMic: boolean;
   selfIsHost: boolean;
+  selfHandRaised: boolean;
   peers: Peer[];
   onClose: () => void;
   onHostMute: (id: string) => void;
@@ -22,6 +23,7 @@ export function ParticipantsPanel({
   selfName,
   selfMic,
   selfIsHost,
+  selfHandRaised,
   peers,
   onClose,
   onHostMute,
@@ -46,7 +48,12 @@ export function ParticipantsPanel({
 
       <div className="dark-scroll flex-1 overflow-y-auto px-2 py-2">
         {/* Self */}
-        <Row name={`${selfName} (You)`} micOn={selfMic} host={selfIsHost} />
+        <Row
+          name={`${selfName} (You)`}
+          micOn={selfMic}
+          host={selfIsHost}
+          hand={selfHandRaised}
+        />
 
         {/* Peers */}
         {peers.map((p) => (
@@ -55,6 +62,7 @@ export function ParticipantsPanel({
               name={p.name}
               micOn={p.micOn}
               host={p.isHost}
+              hand={p.handRaised}
               onMenu={selfIsHost ? () => setMenuFor(menuFor === p.id ? null : p.id) : undefined}
             />
             {selfIsHost && menuFor === p.id && (
@@ -101,11 +109,13 @@ function Row({
   name,
   micOn,
   host,
+  hand,
   onMenu,
 }: {
   name: string;
   micOn: boolean;
   host?: boolean;
+  hand?: boolean;
   onMenu?: () => void;
 }) {
   return (
@@ -115,6 +125,7 @@ function Row({
         <p className="truncate text-sm font-medium">{name}</p>
         {host && <p className="text-xs text-zoom-blue-light">Host</p>}
       </div>
+      {hand && <Hand size={16} className="text-amber-400" />}
       {micOn ? (
         <Mic size={16} className="text-white/60" />
       ) : (

@@ -55,7 +55,17 @@ export interface Peer {
   micOn: boolean;
   camOn: boolean;
   isHost: boolean;
+  handRaised?: boolean;
+  speaking?: boolean; // derived locally from audio levels
   stream?: MediaStream;
+}
+
+/** An ephemeral emoji reaction floating on screen. */
+export interface Reaction {
+  key: string;
+  id: string; // peer id
+  name: string;
+  emoji: string;
 }
 
 export interface ChatMessage {
