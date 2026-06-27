@@ -1,6 +1,7 @@
 "use client";
 
 import { CalendarClock, History, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { Navbar } from "@/components/dashboard/Navbar";
@@ -9,15 +10,20 @@ import { MeetingCard } from "@/components/dashboard/MeetingCard";
 import { JoinModal } from "@/components/modals/JoinModal";
 import { NewMeetingModal } from "@/components/modals/NewMeetingModal";
 import { ScheduleModal } from "@/components/modals/ScheduleModal";
+import { SettingsModal } from "@/components/modals/SettingsModal";
 import { api } from "@/lib/api";
+import { getDisplayName, isSignedOut, signOut } from "@/lib/identity";
 import type { MeetingList, User } from "@/lib/types";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [meetings, setMeetings] = useState<MeetingList | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [modal, setModal] = useState<null | "new" | "join" | "schedule">(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [localName, setLocalName] = useState(() => getDisplayName());
 
   const loadMeetings = useCallback(async () => {
     try {
@@ -30,6 +36,11 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    // Gate the dashboard behind sign-in once the user has explicitly signed out.
+    if (isSignedOut()) {
+      router.replace("/signin");
+      return;
+    }
     let active = true;
     (async () => {
       const [user] = await Promise.all([
@@ -43,16 +54,29 @@ export default function DashboardPage() {
     return () => {
       active = false;
     };
-  }, [loadMeetings]);
+  }, [loadMeetings, router]);
+
+  // Effective display name: locally-chosen name wins over the seeded user.
+  const displayName = localName || user?.name || "Guest";
+
+  const handleSignOut = () => {
+    signOut();
+    router.push("/signin");
+  };
 
   return (
     <div className="min-h-screen bg-[#f7f9fc]">
-      <Navbar user={user} />
+      <Navbar
+        user={user}
+        displayName={displayName}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onSignOut={handleSignOut}
+      />
 
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-zoom-ink">
-            Welcome back{user ? `, ${user.name.split(" ")[0]}` : ""} 👋
+            Welcome back, {displayName.split(" ")[0]} 👋
           </h1>
           <p className="mt-1 text-zoom-gray">
             Start an instant meeting, schedule one, or join with an ID.
@@ -111,6 +135,14 @@ export default function DashboardPage() {
           open
           onClose={() => setModal(null)}
           onScheduled={loadMeetings}
+        />
+      )}
+      {settingsOpen && (
+        <SettingsModal
+          open
+          currentName={displayName}
+          onClose={() => setSettingsOpen(false)}
+          onSaved={(name) => setLocalName(name)}
         />
       )}
     </div>

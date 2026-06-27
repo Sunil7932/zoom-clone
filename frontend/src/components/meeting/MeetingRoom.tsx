@@ -70,6 +70,24 @@ export function MeetingRoom({ meeting, displayName, initialMic, initialCam }: Pr
     }
   }, [m.removed, router]);
 
+  // Keyboard shortcuts: M = toggle mic, V = toggle video (ignored while typing).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === "m" || e.key === "M") {
+        e.preventDefault();
+        m.toggleMic();
+      } else if (e.key === "v" || e.key === "V") {
+        e.preventDefault();
+        m.toggleCam();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [m]);
+
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(meetingLink(meeting.code, meeting.invite_link));

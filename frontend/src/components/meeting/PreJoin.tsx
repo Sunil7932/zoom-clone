@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { Avatar } from "@/components/ui/Avatar";
+import { getJoinPrefs } from "@/lib/identity";
 import type { Meeting } from "@/lib/types";
 
 interface Props {
@@ -29,8 +30,8 @@ export function PreJoin({ meeting, defaultName, onJoin }: Props) {
     }
     return defaultName;
   });
-  const [micOn, setMicOn] = useState(true);
-  const [camOn, setCamOn] = useState(true);
+  const [micOn, setMicOn] = useState(() => getJoinPrefs().mic);
+  const [camOn, setCamOn] = useState(() => getJoinPrefs().cam);
   const [permissionError, setPermissionError] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);

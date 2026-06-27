@@ -76,8 +76,10 @@ Everything in the brief, mapped to where it lives.
 - **Responsive design** — mobile / tablet / desktop (Tailwind, adaptive grids)
 - **Host controls** — mute a participant, remove a participant, **mute all** —
   `components/meeting/ParticipantsPanel.tsx` + signaling
-- _User auth is intentionally omitted — the brief says "assume a default user is
-  logged in." The schema supports multiple users, so auth can be layered on._
+- **Profile & settings** — working Settings panel (edit display name, default
+  mic/camera) and a profile menu with a **sign-out / sign-in** flow. Per the
+  brief there's no password auth; this is a lightweight name-based identity, and
+  the DB schema already supports full multi-user auth.
 
 ### Extra polish (beyond the brief)
 
@@ -85,9 +87,10 @@ Everything in the brief, mapped to where it lives.
   state sync, and a **gallery view** that adapts to participant count.
 - **Raise hand** ✋, **emoji reactions** that float on screen, and **active-speaker
   detection** (Web Audio) that rings the tile of whoever is talking.
-- **Meeting duration timer**, **remembers your display name**, **WebSocket
-  auto-reconnect** with backoff, host auto-promotion when the host leaves,
-  error boundaries, and a backend test suite.
+- **Meeting duration timer**, **remembers your display name**, **keyboard
+  shortcuts** (M = mute, V = video), **WebSocket auto-reconnect** with backoff,
+  host auto-promotion when the host leaves, error boundaries, and a backend
+  test suite.
 
 ---
 
