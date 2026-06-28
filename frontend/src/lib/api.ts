@@ -17,15 +17,29 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  // Abort the request if it hangs. Free-tier backends can cold-start (~50s),
+  // so the timeout is generous but finite — the UI never spins forever.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 70_000);
+
   let res: Response;
   try {
     res = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
       headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
       cache: "no-store",
+      signal: controller.signal,
     });
-  } catch {
-    throw new ApiError(0, "Cannot reach the server. Is the backend running?");
+  } catch (e) {
+    const aborted = e instanceof DOMException && e.name === "AbortError";
+    throw new ApiError(
+      0,
+      aborted
+        ? "The server is taking too long to respond. It may be waking up — please retry."
+        : "Cannot reach the server. Is the backend running?",
+    );
+  } finally {
+    clearTimeout(timeout);
   }
 
   if (!res.ok) {

@@ -64,6 +64,15 @@ export default function DashboardPage() {
     router.push("/signin");
   };
 
+  // Re-run the initial load (used by the Retry button).
+  const retry = async () => {
+    setError("");
+    setLoading(true);
+    const [u] = await Promise.all([api.me().catch(() => null), loadMeetings()]);
+    if (u) setUser(u);
+    setLoading(false);
+  };
+
   return (
     <div className="min-h-screen bg-[#f7f9fc] dark:bg-[#0f1115]">
       <Navbar
@@ -89,15 +98,26 @@ export default function DashboardPage() {
           onSchedule={() => setModal("schedule")}
         />
 
-        {error && (
-          <div className="mt-8 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
-            {error}
+        {error && !loading && (
+          <div className="mt-8 flex flex-col items-start gap-2 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 sm:flex-row sm:items-center sm:justify-between">
+            <span>{error}</span>
+            <button
+              onClick={retry}
+              className="shrink-0 rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
+            >
+              Retry
+            </button>
           </div>
         )}
 
         {loading ? (
-          <div className="mt-16 flex items-center justify-center gap-2 text-zoom-gray">
-            <Loader2 className="animate-spin" size={20} /> Loading your meetings…
+          <div className="mt-16 flex flex-col items-center justify-center gap-2 text-center text-zoom-gray">
+            <span className="flex items-center gap-2">
+              <Loader2 className="animate-spin" size={20} /> Loading your meetings…
+            </span>
+            <span className="text-xs text-gray-400">
+              First load can take up to a minute while the server wakes up.
+            </span>
           </div>
         ) : (
           <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-2">

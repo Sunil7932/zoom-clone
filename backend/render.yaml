@@ -9,19 +9,17 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /
-    # Persistent disk so the SQLite database survives restarts/redeploys.
-    disk:
-      name: zoomclone-data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.9"
       - key: DATABASE_URL
-        value: sqlite:////var/data/zoomclone.db
+        value: sqlite:///./zoomclone.db
       - key: FRONTEND_URL
         sync: false  # set to your deployed frontend URL
       - key: CORS_ORIGINS
         sync: false  # set to your deployed frontend URL
       - key: SEED_ON_STARTUP
         value: "true"
+# NOTE: For durable storage in production, use a paid instance with a persistent
+# disk (mountPath: /var/data, DATABASE_URL=sqlite:////var/data/zoomclone.db) or a
+# managed Postgres. The free tier is ephemeral and re-seeds on restart.
